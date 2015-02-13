@@ -7,7 +7,7 @@ use Guzzle\Cache\DoctrineCacheAdapter;
 use Guzzle\Plugin\Cache\CachePlugin;
 use Guzzle\Plugin\Cache\DefaultCacheStorage;
 
-function ApiClientCreator() {
+function HttpClientCreator() {
 	$httpClient = new GuzzleClient();
 	$cachePlugin = new CachePlugin(array(
 		'storage' => new DefaultCacheStorage(
@@ -17,10 +17,14 @@ function ApiClientCreator() {
 		)
 	));
 	$httpClient->addSubscriber($cachePlugin);
-	return new \Packagist\Api\Client($httpClient);
+	return $httpClient;
 }
 
-function getLatest(array $versions, $returnKey = FALSE) {
+function ApiClientCreator() {
+	return new \Packagist\Api\Client(HttpClientCreator());
+}
+
+function getLatest(array $versions, $returnKey = FALSE, $requireStable = TRUE) {
 	$latest = NULL;
 	foreach ($versions as $version) {
 		$ve = explode('-', $version);
@@ -30,7 +34,7 @@ function getLatest(array $versions, $returnKey = FALSE) {
 		} else {
 			$pf = $ve[1];
 		}
-		if($pf !== 'stable') {
+		if($pf !== 'stable' && $requireStable) {
 			continue;
 		}
 		if($latest === NULL) {
@@ -42,8 +46,10 @@ function getLatest(array $versions, $returnKey = FALSE) {
 			}
 		}
 	}
-	if($returnKey) {
+	if($returnKey && $latest !== NULL) {
 		return array_flip($versions)[$latest];
+	} else if ($latest === NULL && !$requireStable) {
+		return getLatest($versions, $returnKey, FALSE);
 	}
 	return $latest;
 }
@@ -83,7 +89,7 @@ function getRequirements(\Packagist\Api\Result\Package\Version $version, $packag
 }
 */
 function requiredVersion($v) {
-	$v = explode(' ', $v)[0];
+	$v = explode('@', explode(',', explode(' ', $v)[0])[0])[0];
 
 	$v = str_replace(['<', '>', '=', '=', '~', '^', ','], "", $v);
 	$v = str_replace('*', '0', $v);
@@ -132,7 +138,13 @@ class Package {
 		$chart = new Chart();
 		$chart->nodes->addPackage($this);
 
+		if($version->getRequire() === NULL) {
+			return $chart;
+		}
 		foreach ($version->getRequire() as $rName => $rVer) {
+			if($rName === 'php') {
+				continue;
+			}
 			$packageO = new Package($rName, new Version($rVer));
 			$chart->nodes->addPackage($packageO);
 			$chart->edges->addEdge(new Edge($this, $packageO));
@@ -181,6 +193,16 @@ class Packages implements Iterator {
 			$this->addPackage($package);
 		}
 		return $this;
+	}
+
+	public function removePackageByName($name) {
+		foreach ($this->packages as $key => $packge) {
+			if($packge->name === $name) {
+				unset($packge);
+				return TRUE;
+			}
+		}
+		return FALSE;
 	}
 
 	/** Iterator */

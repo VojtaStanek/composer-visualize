@@ -1,13 +1,14 @@
 <?php
 require_once "vendor/autoload.php";
 \Tracy\Debugger::enable();
+Tracy\Debugger::$strictMode = TRUE;
 
 
 require_once "lib.php";
 
 
 $client = ApiClientCreator();
-$package = "nette/nette";
+$package = isset($_GET['package']) ? $_GET['package'] : "nette/nette";
 $pkg = $client->get($package);
 
 $vers = [];
@@ -15,7 +16,7 @@ foreach($pkg->getVersions() as $verName => $version) {
 	$vers[$verName] = $version->getVersionNormalized();
 }
 $versionKey = getLatest($vers, TRUE);
-echo "Package $package, version $versionKey" . PHP_EOL;
+// echo "Package $package, version $versionKey" . PHP_EOL;
 
 /** @var $version \Packagist\Api\Result\Package\Version */
 $version = $pkg->getVersions()[$versionKey];
@@ -40,11 +41,28 @@ $chart = $packageO->getRequirements();
 	<style>
 		body {
 			margin: 0px;
+			background-color: #000000;
+			color: white;
 		}
 
 		#mynetwork {
 			top: 0;
-			l
+			position: absolute;
+			z-index: -10;
+		}
+
+		#overflow {
+
+		}
+
+		#overflow > * {
+			float: left;
+			display: inline-block;
+			clear: both;
+		}
+
+		* {
+			outline: none;
 		}
 
 	</style>
@@ -53,6 +71,18 @@ $chart = $packageO->getRequirements();
 <body>
 
 <div id="mynetwork"></div>
+<div id="overflow">
+	<h1>Composer visualizer</h1>
+	<form method="get" action="index.php">
+		<input type="text" name="package" required>
+		<input type="submit">
+	</form>
+	<div id="package-info">
+		<table id="package-info-table">
+
+		</table>
+	</div>
+</div>
 
 <script type="text/javascript">
 	// create an array with nodes
@@ -88,16 +118,63 @@ $chart = $packageO->getRequirements();
 		height: '100vh',
 		physics: {
 			barnesHut: {
-				gravitationalConstant: -80000,
-				centralGravity: 0,
-				springLength: 70,
-				springConstant: 0.0144,
-				damping: 0.1
+				gravitationalConstant: -800000,
+				centralGravity: 0.001,
+				springLength: 1,
+				springConstant: 0.1,
+				damping: 4
+			}
+		},
+		edges: {
+			style: 'arrow',
+			color: {
+				highlight: 'red'
 			}
 		},
 		smoothCurves: false
 	};
 	var network = new vis.Network(container, data, options);
+
+	createInfoBox = function (name) {
+		var ajax = new XMLHttpRequest();
+		ajax.onreadystatechange = function () {
+			if(ajax.readyState == 4 && ajax.status == 200) {
+				var data = JSON.parse(ajax.responseText);
+				console.log(data.package);
+				table.clear();
+				table.addData('Descritpion', data.package.description);
+				table.addData('Repository', data.package.repository);
+				table.addData('Type', data.package.type);
+				document.querySelector('#package-info-table').innerHTML = table.render();
+			}
+		};
+		ajax.open('GET', 'packageInfo.php?package=' + name + '', true);
+		ajax.send();
+		return name;
+	};
+
+	network.addEventListener('select', function (props) {
+		props.nodes.forEach(function (val) {
+			createInfoBox(val);
+		});
+	});
+
+	var table = {
+		data: [],
+		clear: function () {
+			this.data = [];
+		},
+		addData: function(k, v) {
+			this.data.push({key: k, value: v});
+		},
+		render: function() {
+			var result = '';
+			this.data.forEach(function (v) {
+				result += '<tr><th>'+ v.key+'</th><td>'+ v.value+'</td></tr>';
+			});
+			return result;
+		}
+	};
 </script>
 
 </body>
