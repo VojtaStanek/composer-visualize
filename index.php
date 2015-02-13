@@ -1,13 +1,12 @@
 <?php
-require_once "/home/vojta/public_html/Nette-2.2.6/Nette/loader.php";
-
+require_once "vendor/autoload.php";
 \Tracy\Debugger::enable();
 
-require_once "vendor/autoload.php";
+
 require_once "lib.php";
 
 
-$client = new \Packagist\Api\Client();
+$client = ApiClientCreator();
 $package = "nette/nette";
 $pkg = $client->get($package);
 
@@ -21,8 +20,9 @@ echo "Package $package, version $versionKey" . PHP_EOL;
 /** @var $version \Packagist\Api\Result\Package\Version */
 $version = $pkg->getVersions()[$versionKey];
 
+$packageO = new Package($package, new Version($versionKey));
 
-$chart = getRequirements($version, $package);
+$chart = $packageO->getRequirements();
 
 
 
@@ -37,6 +37,17 @@ $chart = getRequirements($version, $package);
 
 	<script type="text/javascript" src="bower_components/vis/dist/vis.js"></script>
 	<link href="bower_components/vis/dist/vis.css" rel="stylesheet" type="text/css" />
+	<style>
+		body {
+			margin: 0px;
+		}
+
+		#mynetwork {
+			top: 0;
+			l
+		}
+
+	</style>
 </head>
 
 <body>
@@ -48,7 +59,7 @@ $chart = getRequirements($version, $package);
 	var nodes = [
 		<?php
 			$show = '';
-			foreach($chart->nodes as $package => $version) {
+			foreach($chart->nodes as $package) {
 				$show .= '{id: "' . $package . '", label: "' . $package . '"},';
 			}
 			echo $show;
@@ -73,8 +84,18 @@ $chart = getRequirements($version, $package);
 		edges: edges,
 	};
 	var options = {
-		width: '400px',
-		height: '400px'
+		width: '100vw',
+		height: '100vh',
+		physics: {
+			barnesHut: {
+				gravitationalConstant: -80000,
+				centralGravity: 0,
+				springLength: 70,
+				springConstant: 0.0144,
+				damping: 0.1
+			}
+		},
+		smoothCurves: false
 	};
 	var network = new vis.Network(container, data, options);
 </script>

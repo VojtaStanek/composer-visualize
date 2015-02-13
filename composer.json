@@ -2,8 +2,11 @@
     "name": "cactucs/composer-visual",
     "description": "Visualises composer packages",
     "require": {
-        "knplabs/packagist-api": "~1.2",
-        "composer/composer": "~1.0@dev"
+        "knplabs/packagist-api": "~1.2@stable",
+        "composer/composer": "~1.0@dev",
+        "nette/nette": "~2.2@stable",
+        "guzzle/plugin-cache": "~3.7@dev",
+        "doctrine/cache": "~1.5@dev"
     },
     "authors": [
         {

@@ -1,6 +1,24 @@
 <?php
-
 require_once "vendor/autoload.php";
+
+use Guzzle\Http\Client as GuzzleClient;
+use Doctrine\Common\Cache\FilesystemCache;
+use Guzzle\Cache\DoctrineCacheAdapter;
+use Guzzle\Plugin\Cache\CachePlugin;
+use Guzzle\Plugin\Cache\DefaultCacheStorage;
+
+function ApiClientCreator() {
+	$httpClient = new GuzzleClient();
+	$cachePlugin = new CachePlugin(array(
+		'storage' => new DefaultCacheStorage(
+			new DoctrineCacheAdapter(
+				new FilesystemCache(__DIR__ . '/cache')
+			)
+		)
+	));
+	$httpClient->addSubscriber($cachePlugin);
+	return new \Packagist\Api\Client($httpClient);
+}
 
 function getLatest(array $versions, $returnKey = FALSE) {
 	$latest = NULL;
@@ -32,7 +50,7 @@ function getLatest(array $versions, $returnKey = FALSE) {
 
 function findVersionByTag($package, $versionName) {
 	$version = new Version($versionName);
-	$client = new \Packagist\Api\Client();
+	$client = ApiClientCreator();
 	foreach($client->get($package)->getVersions() as $tag => $versionClass) {
 		if($versionClass->getVersionNormalized() == $version->getNormalized()) {
 			return $versionClass;
@@ -42,31 +60,28 @@ function findVersionByTag($package, $versionName) {
 }
 
 function getRequirementsNV($name, $version) {
-	if(isPlatformPackage($name)) {
+	$package = new Package($name, new Version($version));
+	if($package->isPlatformPackage()) {
 		return new Chart();
 	}
-	$version = findVersionByTag($name, $version);
-	return getRequirements($version, $name);
+	return $package->getRequirements();
 }
-
+/*
 function getRequirements(\Packagist\Api\Result\Package\Version $version, $package) {
 	$r = new Chart();
 	$r->nodes[$package] = $version->getVersion();
 
 	foreach ($version->getRequire() as $rName => $rVer) {
 		$r->nodes[$rName] = $rVer;
-		Tracy\Debugger::barDump($r);
 		$r->edges->addEdge(new Edge($package, $rName));
 		$reqReq = getRequirementsNV($rName, $rVer);
 
 		$r->merge($reqReq);
-
-		Tracy\Debugger::barDump($r);
 	}
 
 	return $r;
 }
-
+*/
 function requiredVersion($v) {
 	$v = explode(' ', $v)[0];
 
@@ -90,13 +105,14 @@ class Package {
 	private $versionObject = NULL;
 	public function getVersionObject() {
 		if($this->versionObject === NULL) {
-
+			throw new Exception;
 		}
 		return $this->versionObject;
 	}
 
+
 	public function getPackagistVersion() {
-		findVersionByTag($this->name, $this->version->version);
+		return findVersionByTag($this->name, $this->version->version);
 	}
 
 	public function isPlatformPackage() {
@@ -112,30 +128,35 @@ class Package {
 	}
 
 	public function getRequirements() {
+		$version = $this->getPackagistVersion();
 		$chart = new Chart();
-		$chart->nodes[$package] = $version->getVersion();
+		$chart->nodes->addPackage($this);
 
 		foreach ($version->getRequire() as $rName => $rVer) {
-			$r->nodes[$rName] = $rVer;
-			Tracy\Debugger::barDump($r);
-			$r->edges->addEdge(new Edge($package, $rName));
+			$packageO = new Package($rName, new Version($rVer));
+			$chart->nodes->addPackage($packageO);
+			$chart->edges->addEdge(new Edge($this, $packageO));
 			$reqReq = getRequirementsNV($rName, $rVer);
 
-			$r->merge($reqReq);
-
-			Tracy\Debugger::barDump($r);
+			$chart->merge($reqReq);
 		}
 
-		return $r;
+		return $chart;
 
 	}
 
 	public function equal(Package $package) {
 		return ($package->name === $this->name);
 	}
+
+
+	public function __toString() {
+		return $this->name;
+	}
 }
 
 class Packages implements Iterator {
+	/** @var Package[] */
 	protected $packages = [];
 
 	public function addPackage(Package $package) {
@@ -201,23 +222,26 @@ class Version {
 }
 
 class Chart {
+	/** @var Packages */
 	public $nodes;
+	/** @var  Edges */
 	public $edges;
 
 	public function __construct()
 	{
-		$this->nodes = [];
+		$this->nodes = new Packages();
 		$this->edges = new Edges();
 	}
 
 	public function merge(Chart $toMerge) {
-		$this->nodes = array_merge($toMerge->nodes, $this->nodes);
+		$this->nodes->merge($toMerge->nodes);
 		$this->edges->merge($toMerge->edges);
 		return $this;
 	}
 }
 
 class Edges implements Iterator {
+	/** @var Edge[] */
 	protected $edges = [];
 
 	public function addEdge(Edge $edge) {
@@ -228,13 +252,8 @@ class Edges implements Iterator {
 		return $this;
 	}
 
-	public function exists($from, $to = NULL) {
-		if($to !== NULL) {
-			$edge = new Edge($from, $to);
-		} else {
-			$edge = $from;
-		}
-		foreach ($this->edges as $key => $edgeT) {
+	public function exists($edge) {
+		foreach ($this->edges as $edgeT) {
 			if($edgeT->equal($edge)) {
 				return TRUE;
 			}
@@ -252,6 +271,10 @@ class Edges implements Iterator {
 	/** Iterator */
 
 	protected $position = 0;
+
+	/**
+	 * @return Edge
+	 */
 	public function current() {
 		return $this->edges[$this->position];
 	}
@@ -270,17 +293,19 @@ class Edges implements Iterator {
 }
 
 class Edge {
+	/** @var Package  */
 	public $from;
+	/** @var  Package */
 	public $to;
 
-	public function __construct($from, $to)
+	public function __construct(Package $from, Package $to)
 	{
 		$this->from = $from;
 		$this->to = $to;
 	}
 
 	public function equal(Edge $e) {
-		if($e->from === $this->from && $e->to === $this->to) {
+		if($e->from->equal($this->from) && $e->to->equal($this->to)) {
 			return TRUE;
 		}
 		return FALSE;

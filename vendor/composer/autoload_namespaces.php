@@ -13,9 +13,12 @@ return array(
     'Packagist\\Api\\' => array($vendorDir . '/knplabs/packagist-api/src'),
     'JsonSchema' => array($vendorDir . '/justinrainbow/json-schema/src'),
     'Guzzle\\Stream' => array($vendorDir . '/guzzle/stream'),
+    'Guzzle\\Plugin\\Cache' => array($vendorDir . '/guzzle/plugin-cache'),
     'Guzzle\\Parser' => array($vendorDir . '/guzzle/parser'),
     'Guzzle\\Http' => array($vendorDir . '/guzzle/http'),
     'Guzzle\\Common' => array($vendorDir . '/guzzle/common'),
+    'Guzzle\\Cache' => array($vendorDir . '/guzzle/cache'),
     'Doctrine\\Common\\Inflector\\' => array($vendorDir . '/doctrine/inflector/lib'),
+    'Doctrine\\Common\\Cache\\' => array($vendorDir . '/doctrine/cache/lib'),
     'Composer' => array($vendorDir . '/composer/composer/src'),
 );

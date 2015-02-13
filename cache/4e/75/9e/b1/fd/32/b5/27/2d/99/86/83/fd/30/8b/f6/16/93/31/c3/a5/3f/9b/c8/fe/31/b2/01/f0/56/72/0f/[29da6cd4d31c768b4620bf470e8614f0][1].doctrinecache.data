@@ -1,0 +1,2 @@
+
+s:539:"a:1:{i:0;a:5:{i:0;a:3:{s:4:"host";s:13:"packagist.org";s:10:"user-agent";s:45:"Guzzle/3.9.2 curl/7.35.0 PHP/5.5.9-1ubuntu4.5";s:3:"via";s:21:"1.1 GuzzleCache/3.9.2";}i:1;a:6:{s:6:"server";s:5:"nginx";s:4:"date";s:29:"Fri, 13 Feb 2015 21:29:43 GMT";s:12:"content-type";s:16:"application/json";s:13:"cache-control";s:21:"public, s-maxage=3600";s:15:"x-frame-options";s:4:"DENY";s:25:"strict-transport-security";s:16:"max-age=31104000";}i:2;i:200;i:3;s:64:"f9d0fecd06e8c0c7d0470adec2b5707859de3f40f2beb5d6f3df13cb7dc130ff";i:4;i:1423866426;}}";
