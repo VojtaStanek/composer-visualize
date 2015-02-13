@@ -1,0 +1,15 @@
+{
+    "name": "cactucs/composer-visual",
+    "description": "Visualises composer packages",
+    "require": {
+        "knplabs/packagist-api": "~1.2",
+        "composer/composer": "~1.0@dev"
+    },
+    "authors": [
+        {
+            "name": "Vojta Staněk",
+            "email": "stanekv01@gmail.com"
+        }
+    ],
+    "minimum-stability": "dev"
+}
