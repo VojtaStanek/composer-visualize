@@ -8,23 +8,25 @@ require_once "lib.php";
 
 
 $client = ApiClientCreator();
-$package = isset($_GET['package']) ? $_GET['package'] : "nette/nette";
-$pkg = $client->get($package);
 
-$vers = [];
-foreach($pkg->getVersions() as $verName => $version) {
-	$vers[$verName] = $version->getVersionNormalized();
+$packagesRequest = isset($_GET['package']) ? $_GET['package'] : "nette/nette";
+
+$result = new Chart();
+foreach(explode(',', $packagesRequest) as $package) {
+	$pkg = $client->get($package);
+	$vers = [];
+
+	foreach($pkg->getVersions() as $verName => $version) {
+		$vers[$verName] = $version->getVersionNormalized();
+	}
+	$versionKey = getLatest($vers, TRUE);
+
+	$packageO = new Package($package, new Version($versionKey));
+
+	$result->merge($packageO->getRequirements());
 }
-$versionKey = getLatest($vers, TRUE);
-// echo "Package $package, version $versionKey" . PHP_EOL;
 
-/** @var $version \Packagist\Api\Result\Package\Version */
-$version = $pkg->getVersions()[$versionKey];
-
-$packageO = new Package($package, new Version($versionKey));
-
-$chart = $packageO->getRequirements();
-
+$chart = $result;
 
 
 // var_dump($chart);
@@ -90,7 +92,7 @@ $chart = $packageO->getRequirements();
 		<?php
 			$show = '';
 			foreach($chart->nodes as $package) {
-				$show .= '{id: "' . $package . '", label: "' . $package . '"},';
+				$show .= '{id: "' . $package . '", label: "' . $package . '", group: "' . ($package->isPlatformPackage() ? 'gplatform' : 'gpackage') . '"},';
 			}
 			echo $show;
 		?>
@@ -118,17 +120,29 @@ $chart = $packageO->getRequirements();
 		height: '100vh',
 		physics: {
 			barnesHut: {
-				gravitationalConstant: -800000,
-				centralGravity: 0.001,
-				springLength: 1,
-				springConstant: 0.1,
-				damping: 4
+				gravitationalConstant: -80000,
+				centralGravity: 1,
+				springLength: 10,
+				springConstant: 0.001,
+				damping: 0.005
 			}
 		},
 		edges: {
 			style: 'arrow',
 			color: {
 				highlight: 'red'
+			}
+		},
+		nodes: {
+
+		},
+		groups: {
+			gpackage: {
+				shape: 'elipse'
+			},
+			gplatform: {
+				shape: 'box',
+				value: 20
 			}
 		},
 		smoothCurves: false

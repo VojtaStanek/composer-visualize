@@ -143,7 +143,7 @@ class Package {
 		}
 		foreach ($version->getRequire() as $rName => $rVer) {
 			if($rName === 'php') {
-				continue;
+				// continue;
 			}
 			$packageO = new Package($rName, new Version($rVer));
 			$chart->nodes->addPackage($packageO);
