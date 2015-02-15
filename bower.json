@@ -1,0 +1,19 @@
+{
+  "name": "composer-visual",
+  "version": "0.0.0",
+  "authors": [
+    "Vojta Staněk <stanekv01@gmail.com>"
+  ],
+  "license": "MIT",
+  "private": true,
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "vis": "~3.10.0"
+  }
+}
